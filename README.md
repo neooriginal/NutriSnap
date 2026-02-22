@@ -110,19 +110,10 @@ That's it. The app will be available at **http://localhost:3000**.
 
 > Add your `OPENAI_API_KEY` and `JWT_SECRET` to a `.env` file in the project folder before starting.
 
----
-
-## Privacy
-
-All your data is stored in a single SQLite file on your own machine (`data/food_tracker.db`).  
-Nothing is sent anywhere except to OpenAI when you analyse a food photo or ask for AI coaching.  
-You can delete your data at any time by deleting that file.
-
----
 
 <div align="center">
 
-Built with Node.js · Express · SQLite · GPT-4o · PWA
+Made with ❤️ by [Neo](https://github.com/neooriginal)
 
 </div>
 

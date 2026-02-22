@@ -66,7 +66,7 @@ router.get('/daily', async (req, res) => {
     const targetCal  = user.calorie_target || 2000;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5-mini',
       messages: [
         {
           role: 'system',
@@ -136,7 +136,7 @@ router.get('/weekly', async (req, res) => {
     const logDays = nutrition.length;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5-mini',
       messages: [
         {
           role: 'system',
@@ -238,7 +238,7 @@ Weight goal: ${goalStr}
 Answer questions about their nutrition, suggest meals, explain macros, or give advice — always based on their actual data. Be concise and conversational. If asked about something outside nutrition or health, redirect politely.`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5-mini',
       messages: [
         { role: 'system', content: systemContent },
         ...messages.slice(-10)  // keep last 10 turns to limit context

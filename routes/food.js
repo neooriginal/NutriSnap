@@ -35,7 +35,7 @@ NEVER return null. Always return a JSON object.`;
       : 'Analyze this food image and return the nutrition JSON.';
 
     const makeRequest = () => openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-5-mini',
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: systemPrompt },
