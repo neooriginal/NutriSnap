@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#0f0f13" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="NutriSnap" />
+  <meta name="description" content="AI-powered food tracking with calorie estimation" />
+
+  <title>NutriSnap</title>
+
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="/icons/icon-192.svg" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════ AUTH SCREEN ═══════════════════════════════ -->
+<div id="auth-screen" class="screen active">
+  <div class="auth-bg">
+    <div class="auth-blob blob1"></div>
+    <div class="auth-blob blob2"></div>
+    <div class="auth-blob blob3"></div>
+  </div>
+  <div class="auth-container">
+    <div class="auth-logo">
+      <span class="logo-icon">🥗</span>
+      <h1 class="logo-name">NutriSnap</h1>
+      <p class="logo-tagline">AI-powered nutrition tracking</p>
+    </div>
+
+    <!-- Login Form -->
+    <div id="login-form" class="auth-card glass">
+      <h2>Welcome back</h2>
+      <p class="auth-sub">Sign in to your account</p>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <div id="login-error" class="error-msg hidden"></div>
+      <button id="login-btn" class="btn-primary" onclick="App.login()">
+        <span>Sign In</span>
+      </button>
+      <p class="auth-switch">Don't have an account? <a href="#" onclick="App.showRegister()">Create one</a></p>
+    </div>
+
+    <!-- Register Form -->
+    <div id="register-form" class="auth-card glass hidden">
+      <h2>Create account</h2>
+      <p class="auth-sub">Start your nutrition journey</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="reg-name" placeholder="Alex" />
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="reg-email" placeholder="you@example.com" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="reg-password" placeholder="Min. 8 characters" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Age</label>
+          <input type="number" id="reg-age" placeholder="25" min="10" max="120" />
+        </div>
+        <div class="form-group">
+          <label>Gender</label>
+          <select id="reg-gender">
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Weight (kg)</label>
+          <input type="number" id="reg-weight" placeholder="70" step="0.1" min="20" max="300" />
+        </div>
+        <div class="form-group">
+          <label>Height (cm)</label>
+          <input type="number" id="reg-height" placeholder="175" min="100" max="250" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Activity Level</label>
+          <select id="reg-activity">
+            <option value="sedentary">Sedentary</option>
+            <option value="light">Lightly active</option>
+            <option value="moderate" selected>Moderately active</option>
+            <option value="active">Very active</option>
+            <option value="very_active">Extremely active</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Goal</label>
+          <select id="reg-goal">
+            <option value="lose">Lose weight</option>
+            <option value="maintain" selected>Maintain</option>
+            <option value="gain">Gain weight</option>
+          </select>
+        </div>
+      </div>
+      <div id="reg-error" class="error-msg hidden"></div>
+      <button id="register-btn" class="btn-primary" onclick="App.register()">
+        <span>Create Account</span>
+      </button>
+      <p class="auth-switch">Already have an account? <a href="#" onclick="App.showLogin()">Sign in</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ MAIN APP ══════════════════════════════════ -->
+<div id="app-screen" class="screen">
+
+  <!-- Top Bar -->
+  <header class="topbar glass">
+    <div class="topbar-left">
+      <span class="topbar-logo">🥗</span>
+      <span class="topbar-title">NutriSnap</span>
+    </div>
+    <div class="topbar-right">
+      <span id="topbar-date" class="topbar-date"></span>
+      <button class="icon-btn" onclick="App.logout()" title="Logout">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ──────── TAB: Dashboard ──────── -->
+  <div id="tab-dashboard" class="tab-content active">
+    <div class="scroll-container">
+      <!-- Greeting & calorie ring -->
+      <section class="hero-section">
+        <div class="greeting">
+          <h2 id="greeting-text">Good morning!</h2>
+          <p id="greeting-sub">Here's your nutrition today</p>
+        </div>
+        <div class="calorie-ring-wrapper">
+          <canvas id="calorie-ring" width="180" height="180"></canvas>
+          <div class="ring-center">
+            <span id="ring-consumed" class="ring-cal">0</span>
+            <span class="ring-label">kcal</span>
+            <span id="ring-remaining" class="ring-remain">of 0</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Macro pills -->
+      <section class="macro-section">
+        <div class="macro-card glass">
+          <div class="macro-bar-wrap">
+            <div class="macro-bar protein-bar" id="bar-protein"></div>
+          </div>
+          <div class="macro-info">
+            <span class="macro-icon">🥩</span>
+            <div>
+              <span id="val-protein" class="macro-val">0g</span>
+              <span class="macro-name">Protein</span>
+            </div>
+          </div>
+        </div>
+        <div class="macro-card glass">
+          <div class="macro-bar-wrap">
+            <div class="macro-bar carbs-bar" id="bar-carbs"></div>
+          </div>
+          <div class="macro-info">
+            <span class="macro-icon">🌾</span>
+            <div>
+              <span id="val-carbs" class="macro-val">0g</span>
+              <span class="macro-name">Carbs</span>
+            </div>
+          </div>
+        </div>
+        <div class="macro-card glass">
+          <div class="macro-bar-wrap">
+            <div class="macro-bar fat-bar" id="bar-fat"></div>
+          </div>
+          <div class="macro-info">
+            <span class="macro-icon">🥑</span>
+            <div>
+              <span id="val-fat" class="macro-val">0g</span>
+              <span class="macro-name">Fat</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Fasting mini-widget -->
+      <div id="dash-fast-widget" class="fast-widget glass" onclick="App.switchTab('fasting')">
+        <div class="fast-widget-left">
+          <div id="dash-fast-icon" class="fast-dot idle"></div>
+          <div>
+            <span id="dash-fast-title" class="fast-widget-title">Start a fast</span>
+            <span id="dash-fast-sub" class="fast-widget-sub">Tap to open fasting timer</span>
+          </div>
+        </div>
+        <div id="dash-fast-timer" class="fast-widget-timer">—</div>
+      </div>
+
+      <!-- AI Daily Insight -->
+      <div class="insight-card glass" id="insight-card">
+        <div class="insight-header">
+          <span class="insight-tag">AI Insight</span>
+          <button class="icon-btn" id="insight-refresh" onclick="App.refreshInsight(); event.stopPropagation()" title="Refresh">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>
+          </button>
+        </div>
+        <p id="insight-text" class="insight-text">Loading your daily insight…</p>
+      </div>
+
+      <!-- Today's meals -->
+      <section class="meals-section">
+        <div class="section-header">
+          <h3>Today's meals</h3>
+          <button class="btn-ghost" onclick="App.switchTab('camera')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add
+          </button>
+        </div>
+        <div id="meals-list" class="meals-list">
+          <div class="empty-state">
+            <span class="empty-icon">🍽️</span>
+            <p>No meals logged yet today</p>
+            <button class="btn-primary sm" onclick="App.switchTab('camera')">Snap your first meal</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ──────── TAB: Camera ──────── -->
+  <div id="tab-camera" class="tab-content">
+    <div class="scroll-container">
+      <div class="camera-header">
+        <h2>Log a meal</h2>
+        <p>Take a photo or upload from gallery</p>
+      </div>
+
+      <!-- Camera view -->
+      <div id="camera-area" class="camera-area glass">
+        <div id="camera-placeholder" class="camera-placeholder">
+          <video id="camera-video" autoplay muted playsinline class="hidden"></video>
+          <canvas id="camera-canvas" class="hidden"></canvas>
+          <img id="preview-img" class="hidden" alt="Food preview" />
+          <div id="camera-idle" class="camera-idle">
+            <div class="camera-icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+            </div>
+            <p>Tap to open camera or upload a photo</p>
+          </div>
+        </div>
+        <div class="camera-actions">
+          <button class="btn-cam-action" id="btn-open-camera" onclick="App.openCamera()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            Camera
+          </button>
+          <button class="btn-cam-action" onclick="document.getElementById('file-input').click()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            Upload
+          </button>
+          <button class="btn-cam-action accent hidden" id="btn-capture" onclick="App.capturePhoto()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>
+            Snap
+          </button>
+          <button class="btn-cam-action danger hidden" id="btn-retake" onclick="App.retakePhoto()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <polyline points="1 4 1 10 7 10"/>
+              <path d="M3.51 15a9 9 0 1 0 .49-4.95"/>
+            </svg>
+            Retake
+          </button>
+        </div>
+        <input type="file" id="file-input" accept="image/*" class="hidden" onchange="App.handleFileUpload(event)" />
+      </div>
+
+      <!-- Analyze button -->
+      <button id="btn-analyze" class="btn-primary analyze-btn hidden" onclick="App.analyzeFood()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        Analyze with AI
+      </button>
+
+      <!-- Analyzing loader -->
+      <div id="analyzing-loader" class="analyzing-loader hidden">
+        <div class="loader-dots"><span></span><span></span><span></span></div>
+        <p>AI is analyzing your meal…</p>
+      </div>
+
+      <!-- Analysis result card -->
+      <div id="analysis-result" class="analysis-card glass hidden">
+        <div class="analysis-header">
+          <div>
+            <h3 id="result-name">Food Name</h3>
+            <p id="result-description" class="result-desc"></p>
+            <span id="result-serving" class="serving-badge"></span>
+          </div>
+          <div id="result-confidence" class="confidence-badge"></div>
+        </div>
+        <div class="result-macros">
+          <div class="result-macro-item calories">
+            <span id="res-calories" class="rm-value">0</span>
+            <span class="rm-unit">kcal</span>
+            <span class="rm-label">Calories</span>
+          </div>
+          <div class="result-macro-item protein">
+            <span id="res-protein" class="rm-value">0</span>
+            <span class="rm-unit">g</span>
+            <span class="rm-label">Protein</span>
+          </div>
+          <div class="result-macro-item carbs">
+            <span id="res-carbs" class="rm-value">0</span>
+            <span class="rm-unit">g</span>
+            <span class="rm-label">Carbs</span>
+          </div>
+          <div class="result-macro-item fat">
+            <span id="res-fat" class="rm-value">0</span>
+            <span class="rm-unit">g</span>
+            <span class="rm-label">Fat</span>
+          </div>
+        </div>
+
+        <!-- Edit fields -->
+        <div class="result-edit">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Food name</label>
+              <input type="text" id="edit-name" />
+            </div>
+            <div class="form-group">
+              <label>Meal type</label>
+              <select id="edit-meal-type">
+                <option value="breakfast">Breakfast</option>
+                <option value="lunch">Lunch</option>
+                <option value="dinner">Dinner</option>
+                <option value="snack" selected>Snack</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Calories</label>
+              <input type="number" id="edit-calories" min="0" />
+            </div>
+            <div class="form-group">
+              <label>Protein (g)</label>
+              <input type="number" id="edit-protein" min="0" step="0.1" />
+            </div>
+            <div class="form-group">
+              <label>Carbs (g)</label>
+              <input type="number" id="edit-carbs" min="0" step="0.1" />
+            </div>
+            <div class="form-group">
+              <label>Fat (g)</label>
+              <input type="number" id="edit-fat" min="0" step="0.1" />
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-primary" onclick="App.logFood()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Add to Log
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──────── TAB: Fasting ──────── -->
+  <div id="tab-fasting" class="tab-content">
+    <div class="scroll-container">
+      <div class="section-header pad-top">
+        <h2>Intermittent Fasting</h2>
+        <button class="icon-btn" id="notif-btn" onclick="App.requestNotifications()" title="Enable reminders">
+          <svg id="notif-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Timer card -->
+      <div class="fast-timer-card glass">
+        <div class="fast-timer-wrap">
+          <canvas id="fast-arc" width="220" height="220"></canvas>
+          <div class="fast-arc-center">
+            <span id="fast-time-display" class="fast-time">00:00:00</span>
+            <span id="fast-status-label" class="fast-status-sub">Not fasting</span>
+            <span id="fast-progress-pct" class="fast-pct"></span>
+          </div>
+        </div>
+
+        <!-- Protocol selector -->
+        <div id="fast-protocol-wrap">
+          <p class="fast-protocol-label">Choose protocol</p>
+          <div class="fast-protocols">
+            <button class="proto-btn active" data-hours="16" data-proto="16:8" onclick="App.selectProtocol(this)">16:8</button>
+            <button class="proto-btn" data-hours="18" data-proto="18:6" onclick="App.selectProtocol(this)">18:6</button>
+            <button class="proto-btn" data-hours="20" data-proto="20:4" onclick="App.selectProtocol(this)">20:4</button>
+            <button class="proto-btn" data-hours="24" data-proto="24h" onclick="App.selectProtocol(this)">24h</button>
+            <button class="proto-btn" data-hours="0" data-proto="custom" onclick="App.selectProtocol(this)">Custom</button>
+          </div>
+          <div id="custom-hours-wrap" class="hidden">
+            <label style="margin-top:8px">Custom duration (hours)</label>
+            <input type="number" id="custom-hours-input" min="1" max="72" value="20" style="margin-top:6px" />
+          </div>
+          <div id="fast-eating-window" class="fast-eating-window"></div>
+        </div>
+
+        <button id="fast-action-btn" class="btn-primary" onclick="App.toggleFast()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Start Fast
+        </button>
+
+        <!-- End fast options (shown when active) -->
+        <div id="fast-end-options" class="hidden">
+          <div class="form-row" style="margin-top:12px">
+            <div class="form-group">
+              <label>How do you feel?</label>
+              <select id="fast-feeling">
+                <option value="great">Great</option>
+                <option value="good" selected>Good</option>
+                <option value="okay">Okay</option>
+                <option value="tough">Tough</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Note (optional)</label>
+              <input type="text" id="fast-note" placeholder="e.g. Coffee helped" />
+            </div>
+          </div>
+          <button class="btn-ghost danger-ghost" onclick="App.cancelFast()" style="width:100%;justify-content:center;margin-top:4px">
+            Cancel fast (don't log)
+          </button>
+        </div>
+      </div>
+
+      <!-- Fasting stats -->
+      <div id="fast-stats-row" class="stats-row" style="margin-bottom:14px"></div>
+
+      <!-- History -->
+      <div class="section-header">
+        <h3>Recent fasts</h3>
+      </div>
+      <div id="fast-history-list" class="fast-history-list"></div>
+    </div>
+  </div>
+
+  <!-- ──────── TAB: Charts ──────── -->
+  <div id="tab-charts" class="tab-content">
+    <div class="scroll-container">
+      <div class="section-header pad-top">
+        <h2>Nutrition history</h2>
+        <select id="chart-range" onchange="App.loadCharts()" class="range-select">
+          <option value="7">7 days</option>
+          <option value="14">14 days</option>
+          <option value="30" selected>30 days</option>
+        </select>
+      </div>
+
+      <div class="chart-card glass">
+        <h4>Daily Calories</h4>
+        <div class="chart-wrap">
+          <canvas id="calories-chart"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card glass">
+        <h4>Macronutrients</h4>
+        <div class="chart-wrap">
+          <canvas id="macros-chart"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card glass">
+        <h4>Macro Split (average)</h4>
+        <div class="chart-wrap chart-wrap-sm">
+          <canvas id="pie-chart"></canvas>
+        </div>
+      </div>
+
+      <div id="chart-stats" class="stats-row"></div>
+    </div>
+  </div>
+
+  <!-- ──────── TAB: Profile ──────── -->
+  <div id="tab-profile" class="tab-content">
+    <div class="scroll-container">
+      <div class="profile-header">
+        <div class="profile-avatar" id="profile-avatar">A</div>
+        <h2 id="profile-name">Name</h2>
+        <p id="profile-email" class="profile-email">email</p>
+      </div>
+
+      <!-- BMI & Stats cards -->
+      <div class="stats-grid">
+        <div class="stat-card glass bmi-card">
+          <div class="stat-top">
+            <span class="stat-label">BMI</span>
+            <span id="bmi-category" class="bmi-badge">—</span>
+          </div>
+          <span id="bmi-value" class="stat-big">—</span>
+          <div class="bmi-scale">
+            <div class="bmi-track">
+              <div class="bmi-thumb" id="bmi-thumb"></div>
+            </div>
+            <div class="bmi-labels">
+              <span>Underweight</span><span>Normal</span><span>Over</span><span>Obese</span>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card glass">
+          <span class="stat-label">Daily Target</span>
+          <span id="stat-target" class="stat-big">— <small>kcal</small></span>
+        </div>
+        <div class="stat-card glass">
+          <span class="stat-label">BMR</span>
+          <span id="stat-bmr" class="stat-big">— <small>kcal</small></span>
+        </div>
+        <div class="stat-card glass">
+          <span class="stat-label">TDEE</span>
+          <span id="stat-tdee" class="stat-big">— <small>kcal</small></span>
+        </div>
+      </div>
+
+      <!-- Weight goal -->
+      <div class="weight-goal-card glass">
+        <div class="section-header" style="margin-bottom:14px">
+          <h3>Weight goal</h3>
+          <button class="btn-ghost" onclick="App.getWeightAnalysis()" id="wg-ai-btn">AI analysis</button>
+        </div>
+        <div id="wg-progress-wrap" class="hidden">
+          <div class="wg-progress-bar-wrap">
+            <div class="wg-progress-bar" id="wg-bar"></div>
+            <div class="wg-progress-thumb" id="wg-thumb"></div>
+          </div>
+          <div class="wg-labels">
+            <span id="wg-start-label">—</span>
+            <span id="wg-current-label" class="wg-current">—</span>
+            <span id="wg-target-label">—</span>
+          </div>
+          <p id="wg-days-left" class="wg-days-left"></p>
+          <div id="wg-analysis-text" class="insight-text" style="margin-top:10px"></div>
+        </div>
+        <div id="wg-no-goal" class="">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Target weight (kg)</label>
+              <input type="number" id="wg-target" step="0.1" placeholder="70" />
+            </div>
+            <div class="form-group">
+              <label>Target date</label>
+              <input type="date" id="wg-date" />
+            </div>
+          </div>
+          <button class="btn-primary" onclick="App.setWeightGoal()">Set Goal</button>
+        </div>
+        <!-- Quick weight log -->
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+          <div class="form-row" style="margin-bottom:0">
+            <div class="form-group">
+              <label>Log today's weight (kg)</label>
+              <input type="number" id="wg-log-weight" step="0.1" placeholder="70.5" />
+            </div>
+            <div style="display:flex;align-items:flex-end;padding-bottom:12px">
+              <button class="btn-ghost" onclick="App.logWeight()">Log</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Edit profile -->
+      <div class="profile-edit-card glass">
+        <h3>Personal details</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="p-name" />
+          </div>
+          <div class="form-group">
+            <label>Age</label>
+            <input type="number" id="p-age" min="10" max="120" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Weight (kg)</label>
+            <input type="number" id="p-weight" step="0.1" />
+          </div>
+          <div class="form-group">
+            <label>Height (cm)</label>
+            <input type="number" id="p-height" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Gender</label>
+            <select id="p-gender">
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Activity</label>
+            <select id="p-activity">
+              <option value="sedentary">Sedentary</option>
+              <option value="light">Light</option>
+              <option value="moderate">Moderate</option>
+              <option value="active">Active</option>
+              <option value="very_active">Very Active</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Goal</label>
+          <select id="p-goal">
+            <option value="lose">Lose weight (−500 kcal/day)</option>
+            <option value="maintain">Maintain weight</option>
+            <option value="gain">Gain weight (+300 kcal/day)</option>
+          </select>
+        </div>
+        <button class="btn-primary" onclick="App.saveProfile()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──────── Bottom Nav ──────── -->
+  <nav class="bottom-nav glass">
+    <button class="nav-btn active" data-tab="dashboard" onclick="App.switchTab('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+      <span>Today</span>
+    </button>
+    <button class="nav-btn" data-tab="camera" onclick="App.switchTab('camera')">
+      <div class="nav-cam-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+      </div>
+      <span>Log Food</span>
+    </button>
+    <button class="nav-btn" data-tab="fasting" onclick="App.switchTab('fasting')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+      <span>Fasting</span>
+    </button>
+    <button class="nav-btn" data-tab="charts" onclick="App.switchTab('charts')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="18" y1="20" x2="18" y2="10"/>
+        <line x1="12" y1="20" x2="12" y2="4"/>
+        <line x1="6" y1="20" x2="6" y2="14"/>
+      </svg>
+      <span>Progress</span>
+    </button>
+    <button class="nav-btn" data-tab="profile" onclick="App.switchTab('profile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+      <span>Profile</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ═══════════════════════════════ TOAST ════════════════════════════════════ -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="/js/app.js"></script>
+</body>
+</html>
