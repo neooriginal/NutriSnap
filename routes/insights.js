@@ -92,7 +92,8 @@ Current time: ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute
 Given this data, give ONE specific action the user must take TODAY. Be direct and proactive.`
         }
       ],
-      max_completion_tokens: 180
+      reasoning_effort: 'low',
+      max_completion_tokens: 1500
     });
 
     res.json({ insight: (completion.choices[0].message.content || completion.choices[0].message.refusal || '').trim() });
@@ -157,7 +158,8 @@ THIS WEEK: Two specific, numbered actions the user must do differently this week
 Write the 30-day review.`
         }
       ],
-      max_completion_tokens: 300
+      reasoning_effort: 'low',
+      max_completion_tokens: 2000
     });
 
     res.json({ report: (completion.choices[0].message.content || completion.choices[0].message.refusal || '').trim() });
@@ -243,11 +245,11 @@ Answer questions about their nutrition, suggest meals, explain macros, or give a
         { role: 'developer', content: systemContent },
         ...messages.slice(-10)  // keep last 10 turns to limit context
       ],
-      max_completion_tokens: 400
+      reasoning_effort: 'low',
+      max_completion_tokens: 2000
     });
 
     const msg = completion.choices[0].message;
-    console.log('[chat] finish_reason:', completion.choices[0].finish_reason, 'content:', msg.content?.slice(0, 100));
     const reply = msg.content || msg.refusal || '';
     res.json({ reply: reply.trim() });
   } catch (e) {

@@ -94,7 +94,8 @@ Person: ${user.age || '?'} years, ${user.gender || '?'}, ${user.activity || 'mod
 Give a direct, honest progress check and the one most important action to take this week.`
         }
       ],
-      max_completion_tokens: 200
+      reasoning_effort: 'low',
+      max_completion_tokens: 1500
     });
 
     res.json({ analysis: (completion.choices[0].message.content || completion.choices[0].message.refusal || '').trim() });
