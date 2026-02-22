@@ -92,7 +92,7 @@ Current time: ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute
 Given this data, give ONE specific action the user must take TODAY. Be direct and proactive.`
         }
       ],
-      max_tokens: 180
+      max_completion_tokens: 180
     });
 
     res.json({ insight: completion.choices[0].message.content.trim() });
@@ -157,7 +157,7 @@ THIS WEEK: Two specific, numbered actions the user must do differently this week
 Write the 30-day review.`
         }
       ],
-      max_tokens: 300
+      max_completion_tokens: 300
     });
 
     res.json({ report: completion.choices[0].message.content.trim() });
@@ -243,7 +243,7 @@ Answer questions about their nutrition, suggest meals, explain macros, or give a
         { role: 'system', content: systemContent },
         ...messages.slice(-10)  // keep last 10 turns to limit context
       ],
-      max_tokens: 400
+      max_completion_tokens: 400
     });
 
     res.json({ reply: completion.choices[0].message.content.trim() });

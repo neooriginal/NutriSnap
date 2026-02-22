@@ -44,7 +44,7 @@ NEVER return null. Always return a JSON object.`;
           { type: 'image_url', image_url: { url: dataUri, detail: 'auto' } }
         ]}
       ],
-      max_tokens: 800
+      max_completion_tokens: 800
     });
 
     let completion = await makeRequest();
