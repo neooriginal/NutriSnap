@@ -21,7 +21,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 
-  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/style.css?v=2" />
 </head>
 <body>
 
@@ -221,6 +221,19 @@
         <div id="dash-fast-timer" class="fast-widget-timer">—</div>
       </div>
 
+      <!-- Notification prompt (shown when permission not yet asked) -->
+      <div id="notif-prompt" class="notif-prompt-card glass hidden">
+        <div class="notif-prompt-icon">🔔</div>
+        <div class="notif-prompt-text">
+          <strong>Enable meal reminders</strong>
+          <span>Get nudged at noon and in the evening if you haven't logged.</span>
+        </div>
+        <button class="btn-ghost" onclick="App.requestNotifications()">Enable</button>
+        <button class="icon-btn" onclick="App.dismissNotifPrompt()" title="Dismiss">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
       <!-- AI Daily Insight -->
       <div class="insight-card glass" id="insight-card">
         <div class="insight-header">
@@ -305,6 +318,11 @@
           </button>
         </div>
         <input type="file" id="file-input" accept="image/*" class="hidden" onchange="App.handleFileUpload(event)" />
+      </div>
+
+      <!-- Optional note for AI context -->
+      <div id="snap-note-wrap" class="snap-note-wrap hidden">
+        <input type="text" id="snap-note" class="snap-note-input" placeholder="Optional: describe the portion, e.g. &ldquo;large bowl&rdquo; or &ldquo;half serving&rdquo;" maxlength="120" />
       </div>
 
       <!-- Analyze button -->
@@ -394,6 +412,22 @@
         <button class="btn-primary" onclick="App.logFood()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
           Add to Log
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──────── TAB: Chat ──────── -->
+  <div id="tab-chat" class="tab-content">
+    <div class="scroll-container">
+      <div class="section-header pad-top">
+        <h2>Ask your AI coach</h2>
+      </div>
+      <div id="chat-messages" class="chat-messages"></div>
+      <div class="chat-input-wrap">
+        <input type="text" id="chat-input" class="chat-input" placeholder="Ask about your meals, macros, goals…" maxlength="500" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();App.sendChatMessage()}" />
+        <button class="chat-send-btn" onclick="App.sendChatMessage()" id="chat-send-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         </button>
       </div>
     </div>
@@ -726,12 +760,18 @@
       </svg>
       <span>Profile</span>
     </button>
+    <button class="nav-btn" data-tab="chat" onclick="App.switchTab('chat')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      <span>Chat</span>
+    </button>
   </nav>
 </div>
 
 <!-- ═══════════════════════════════ TOAST ════════════════════════════════════ -->
 <div id="toast" class="toast hidden"></div>
 
-<script src="/js/app.js"></script>
+<script src="/js/app.js?v=2"></script>
 </body>
 </html>

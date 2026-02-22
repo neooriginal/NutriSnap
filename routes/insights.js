@@ -166,4 +166,90 @@ Write the 30-day review.`
   }
 });
 
+router.post('/chat', express.json(), async (req, res) => {
+  try {
+    const raw  = stmts.getUserById.get(req.user.id);
+    const user = { ...raw, ...computeStats(raw) };
+
+    const { messages = [] } = req.body;
+    if (!messages.length) return res.status(400).json({ error: 'No messages provided.' });
+
+    const to   = new Date().toISOString().slice(0, 10);
+    const from = (() => { const d = new Date(to); d.setDate(d.getDate() - 6); return d.toISOString().slice(0, 10); })();
+
+    const nutrition = db.prepare(`
+      SELECT log_date,
+             ROUND(SUM(calories),0) AS cal,
+             ROUND(SUM(protein),1)  AS prot,
+             ROUND(SUM(carbs),1)    AS carb,
+             ROUND(SUM(fat),1)      AS fat
+      FROM food_logs WHERE user_id = ? AND log_date BETWEEN ? AND ?
+      GROUP BY log_date ORDER BY log_date
+    `).all(req.user.id, from, to);
+
+    const todayMeals = db.prepare(`
+      SELECT food_name, calories, protein, carbs, fat, meal_type
+      FROM food_logs WHERE user_id = ? AND log_date = ?
+      ORDER BY logged_at
+    `).all(req.user.id, to);
+
+    const activeFast = db.prepare(`
+      SELECT *, ROUND((julianday('now') - julianday(started_at)) * 24, 1) AS elapsed_hours
+      FROM fasting_sessions WHERE user_id = ? AND status = 'active'
+    `).get(req.user.id);
+
+    const weightGoal = db.prepare(`
+      SELECT wg.*, wl.weight AS latest_weight
+      FROM weight_goals wg
+      LEFT JOIN weight_logs wl ON wl.user_id = wg.user_id
+      WHERE wg.user_id = ? AND wg.active = 1
+      ORDER BY wl.logged_at DESC LIMIT 1
+    `).get(req.user.id);
+
+    const nutritionStr = nutrition.length
+      ? nutrition.map(n => `${n.log_date}: ${n.cal} kcal (P:${n.prot}g C:${n.carb}g F:${n.fat}g)`).join('\n')
+      : 'No meals logged this week.';
+
+    const todayStr = todayMeals.length
+      ? todayMeals.map(m => `  - ${m.meal_type}: ${m.food_name} (${m.calories} kcal, P:${m.protein}g C:${m.carbs}g F:${m.fat}g)`).join('\n')
+      : '  No meals logged today.';
+
+    const fastStr = activeFast
+      ? `Currently ${activeFast.elapsed_hours}h into a ${activeFast.target_hours}h fast.`
+      : 'No active fast.';
+
+    const goalStr = weightGoal
+      ? `Weight goal: reach ${weightGoal.target_weight}kg by ${weightGoal.target_date}. Current: ${weightGoal.latest_weight || user.weight || '?'}kg.`
+      : 'No weight goal set.';
+
+    const systemContent = `You are a knowledgeable, friendly nutrition assistant built into NutriSnap. You have full access to the user's food data and can answer questions about it.
+
+User: ${user.name || 'user'}, ${user.age || '?'}y ${user.gender || 'person'}, ${user.activity || 'moderate'} activity, goal: ${user.goal || 'maintain'}, daily calorie target: ${user.calorie_target || 2000} kcal, BMI: ${user.bmi || '?'}.
+
+Last 7 days of nutrition:
+${nutritionStr}
+
+Today's meals (${to}):
+${todayStr}
+
+Fasting: ${fastStr}
+Weight goal: ${goalStr}
+
+Answer questions about their nutrition, suggest meals, explain macros, or give advice — always based on their actual data. Be concise and conversational. If asked about something outside nutrition or health, redirect politely.`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemContent },
+        ...messages.slice(-10)  // keep last 10 turns to limit context
+      ],
+      max_tokens: 400
+    });
+
+    res.json({ reply: completion.choices[0].message.content.trim() });
+  } catch (e) {
+    res.status(500).json({ error: 'Chat failed: ' + e.message });
+  }
+});
+
 module.exports = router;

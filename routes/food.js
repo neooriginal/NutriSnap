@@ -29,13 +29,18 @@ Always respond with ONLY valid JSON — no markdown, no extra text. Use this exa
 If you cannot identify food, still return the JSON with your best guess and confidence:"low".
 NEVER return null. Always return a JSON object.`;
 
+    const userNote = (req.body?.notes || '').trim();
+    const userText = userNote
+      ? `Analyze this food image and return the nutrition JSON. The user added a note: "${userNote}"`
+      : 'Analyze this food image and return the nutrition JSON.';
+
     const makeRequest = () => openai.chat.completions.create({
       model: 'gpt-4o',
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: [
-          { type: 'text', text: 'Analyze this food image and return the nutrition JSON.' },
+          { type: 'text', text: userText },
           { type: 'image_url', image_url: { url: dataUri, detail: 'auto' } }
         ]}
       ],

@@ -30,6 +30,9 @@ const App = (() => {
   // Insight cache
   let insightCached    = null;
 
+  // Chat
+  let chatMessages     = [];   // [{role, content}]
+
   const today = () => new Date().toISOString().slice(0, 10);
 
   // ─── API helpers ───────────────────────────────────────────────
@@ -162,6 +165,7 @@ const App = (() => {
     switchTab('dashboard');
     scheduleReminders();
     requestNotificationsIfGranted();
+    setTimeout(showNotifPrompt, 1500);
   }
 
   function updateGreeting() {
@@ -190,6 +194,7 @@ const App = (() => {
     if (tab === 'fasting')   loadFastingTab();
     if (tab === 'charts')    loadCharts();
     if (tab === 'profile')   loadProfile();
+    if (tab === 'chat')      initChatTab();
     if (tab !== 'camera')    stopCamera();
 
     history.replaceState(null, '', tab === 'dashboard' ? '/' : '/?tab=' + tab);
@@ -381,11 +386,12 @@ const App = (() => {
     document.getElementById('camera-video').classList.add('hidden');
     document.getElementById('btn-capture').classList.add('hidden');
     document.getElementById('btn-retake').classList.remove('hidden');
-    document.getElementById('btn-analyze').classList.add('hidden');
     document.getElementById('analysis-result').classList.add('hidden');
+    document.getElementById('snap-note-wrap').classList.remove('hidden');
+    document.getElementById('snap-note').value = '';
+    document.getElementById('btn-analyze').classList.remove('hidden');
     document.getElementById('btn-open-camera').innerHTML =
       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Camera`;
-    analyzeFood();
   }
 
   function retakePhoto() {
@@ -396,6 +402,8 @@ const App = (() => {
     document.getElementById('btn-analyze').classList.add('hidden');
     document.getElementById('analysis-result').classList.add('hidden');
     document.getElementById('analyzing-loader').classList.add('hidden');
+    document.getElementById('snap-note-wrap').classList.add('hidden');
+    document.getElementById('snap-note').value = '';
     document.getElementById('file-input').value = '';
   }
 
@@ -419,9 +427,11 @@ const App = (() => {
 
     try {
       // Convert base64 data URI to Blob for FormData
-      const blob = dataURItoBlob(capturedImage);
-      const form = new FormData();
+      const blob  = dataURItoBlob(capturedImage);
+      const notes = (document.getElementById('snap-note')?.value || '').trim();
+      const form  = new FormData();
       form.append('image', blob, 'food.jpg');
+      if (notes) form.append('notes', notes);
 
       const res = await fetch('/api/food/analyze', {
         method: 'POST',
@@ -1060,6 +1070,19 @@ const App = (() => {
   // AI INSIGHTS
   // ═══════════════════════════════════════════════════════════════
 
+  function showNotifPrompt() {
+    const el = document.getElementById('notif-prompt');
+    if (!el) return;
+    const dismissed = localStorage.getItem('ns_notif_dismissed');
+    if (dismissed || Notification.permission !== 'default') return;
+    el.classList.remove('hidden');
+  }
+
+  function dismissNotifPrompt() {
+    document.getElementById('notif-prompt')?.classList.add('hidden');
+    localStorage.setItem('ns_notif_dismissed', '1');
+  }
+
   async function loadInsight() {
     const el = document.getElementById('insight-text');
     if (!el) return;
@@ -1104,6 +1127,84 @@ const App = (() => {
       el.classList.remove('loading');
       if (btn) { btn.disabled = false; btn.style.transform = ''; }
     }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // AI CHAT
+  // ═══════════════════════════════════════════════════════════════
+
+  function initChatTab() {
+    if (chatMessages.length === 0) renderChatMessages();
+  }
+
+  async function sendChatMessage() {
+    const input = document.getElementById('chat-input');
+    const btn   = document.getElementById('chat-send-btn');
+    const text  = input.value.trim();
+    if (!text) return;
+
+    input.value = '';
+    input.disabled = true;
+    btn.disabled   = true;
+
+    chatMessages.push({ role: 'user', content: text });
+    renderChatMessages();
+
+    // Show typing indicator
+    const msgsEl = document.getElementById('chat-messages');
+    const typing = document.createElement('div');
+    typing.className = 'chat-bubble assistant typing';
+    typing.innerHTML = '<span></span><span></span><span></span>';
+    msgsEl.appendChild(typing);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+
+    try {
+      const { reply } = await api('POST', '/api/insights/chat', { messages: chatMessages });
+      typing.remove();
+      chatMessages.push({ role: 'assistant', content: reply });
+      renderChatMessages();
+    } catch (e) {
+      typing.remove();
+      chatMessages.push({ role: 'assistant', content: 'Sorry, something went wrong. Please try again.' });
+      renderChatMessages();
+    } finally {
+      input.disabled = false;
+      btn.disabled   = false;
+      input.focus();
+    }
+  }
+
+  function renderChatMessages() {
+    const el = document.getElementById('chat-messages');
+    if (!el) return;
+
+    if (chatMessages.length === 0) {
+      el.innerHTML = `<div class="chat-welcome">
+        <div class="chat-welcome-icon">🥦</div>
+        <p>Hi ${(user?.name || 'there').split(' ')[0]}! I know your meal history and goals.<br/>Ask me anything about your nutrition.</p>
+        <div class="chat-suggestions">
+          <button class="chat-suggestion" onclick="App.useSuggestion(this)">What did I eat today?</button>
+          <button class="chat-suggestion" onclick="App.useSuggestion(this)">Am I hitting my protein goal?</button>
+          <button class="chat-suggestion" onclick="App.useSuggestion(this)">What should I eat for dinner?</button>
+          <button class="chat-suggestion" onclick="App.useSuggestion(this)">How is my progress this week?</button>
+        </div>
+      </div>`;
+      return;
+    }
+
+    el.innerHTML = chatMessages.map(m => `
+      <div class="chat-bubble ${m.role}">${escHtml(m.content).replace(/\n/g, '<br/>')}</div>
+    `).join('');
+
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function useSuggestion(btn) {
+    const input = document.getElementById('chat-input');
+    if (!input) return;
+    input.value = btn.textContent;
+    input.focus();
+    sendChatMessage();
   }
 
   // ─── MCP Key ─────────────────────────────────────────────────────────────
@@ -1186,17 +1287,20 @@ const App = (() => {
     if (!('Notification' in window)) return toast('Notifications not supported on this browser.');
     if (Notification.permission === 'granted') {
       updateNotifIcon(true);
+      dismissNotifPrompt();
       toast('Reminders already enabled!', 'success');
       scheduleReminders();
       return;
     }
     const perm = await Notification.requestPermission();
+    dismissNotifPrompt();
     if (perm === 'granted') {
       updateNotifIcon(true);
       toast('Reminders enabled!', 'success');
       scheduleReminders();
       sendNotification('NutriSnap reminders on', 'You\'ll get daily meal and fasting reminders.');
     } else {
+      localStorage.setItem('ns_notif_dismissed', '1');
       toast('Notifications blocked. Enable in browser settings.', 'error');
     }
   }
@@ -1343,9 +1447,11 @@ const App = (() => {
     // Insights
     refreshInsight,
     // Notifications
-    requestNotifications,
+    requestNotifications, dismissNotifPrompt,
     // MCP key
-    loadMcpKey, generateMcpKey, revokeMcpKey, copyMcpKey, copyMcpUrl
+    loadMcpKey, generateMcpKey, revokeMcpKey, copyMcpKey, copyMcpUrl,
+    // Chat
+    sendChatMessage, useSuggestion
   };
 
 })();
