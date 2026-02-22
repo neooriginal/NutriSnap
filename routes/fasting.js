@@ -5,8 +5,7 @@ const { db }  = require('../database');
 
 const router = express.Router();
 
-// ─── Start fast ───────────────────────────────────────────────────────────────
-// POST /api/fasting/start
+
 router.post('/start', express.json(), (req, res) => {
   // Cancel any running fast first
   db.prepare(`
@@ -24,8 +23,7 @@ router.post('/start', express.json(), (req, res) => {
   res.json({ session });
 });
 
-// ─── End fast ─────────────────────────────────────────────────────────────────
-// POST /api/fasting/end
+
 router.post('/end', express.json(), (req, res) => {
   const { feeling, note } = req.body;
   const session = db.prepare(`
@@ -48,8 +46,7 @@ router.post('/end', express.json(), (req, res) => {
   res.json({ success: true, actual_hours });
 });
 
-// ─── Cancel fast ──────────────────────────────────────────────────────────────
-// POST /api/fasting/cancel
+
 router.post('/cancel', (req, res) => {
   db.prepare(`
     UPDATE fasting_sessions SET status = 'cancelled', ended_at = datetime('now')
@@ -58,8 +55,7 @@ router.post('/cancel', (req, res) => {
   res.json({ success: true });
 });
 
-// ─── Current fast status ──────────────────────────────────────────────────────
-// GET /api/fasting/current
+
 router.get('/current', (req, res) => {
   const session = db.prepare(`
     SELECT * FROM fasting_sessions WHERE user_id = ? AND status = 'active'
@@ -67,8 +63,7 @@ router.get('/current', (req, res) => {
   res.json({ session: session || null });
 });
 
-// ─── Fasting history ──────────────────────────────────────────────────────────
-// GET /api/fasting/history?limit=20
+
 router.get('/history', (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 20, 100);
   const rows  = db.prepare(`

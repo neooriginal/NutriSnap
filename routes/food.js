@@ -13,8 +13,7 @@ const upload = multer({
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// ─── Analyze food from image ──────────────────────────────────────────────────
-// POST /api/food/analyze
+
 router.post('/analyze', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No image provided.' });
@@ -71,8 +70,7 @@ NEVER return null. Always return a JSON object.`;
   }
 });
 
-// ─── Log a food entry ─────────────────────────────────────────────────────────
-// POST /api/food/log
+
 router.post('/log', express.json(), (req, res) => {
   const { food_name, description, calories, protein, carbs, fat, fiber,
           serving_size, meal_type, log_date, image_data } = req.body;
@@ -99,8 +97,7 @@ router.post('/log', express.json(), (req, res) => {
   res.json({ id: result.lastInsertRowid, success: true });
 });
 
-// ─── Get logs for a date ──────────────────────────────────────────────────────
-// GET /api/food/logs?date=YYYY-MM-DD
+
 router.get('/logs', (req, res) => {
   const date = req.query.date || new Date().toISOString().slice(0, 10);
   const logs = stmts.getLogsByDate.all(req.user.id, date);
@@ -108,8 +105,7 @@ router.get('/logs', (req, res) => {
   res.json({ logs, totals, date });
 });
 
-// ─── Get weekly/range summary ─────────────────────────────────────────────────
-// GET /api/food/summary?from=YYYY-MM-DD&to=YYYY-MM-DD
+
 router.get('/summary', (req, res) => {
   const to   = req.query.to   || new Date().toISOString().slice(0, 10);
   const from = req.query.from || (() => {
@@ -121,8 +117,7 @@ router.get('/summary', (req, res) => {
   res.json({ rows, from, to });
 });
 
-// ─── Delete a log entry ───────────────────────────────────────────────────────
-// DELETE /api/food/log/:id
+
 router.delete('/log/:id', (req, res) => {
   const result = stmts.deleteLog.run(parseInt(req.params.id), req.user.id);
   if (result.changes === 0)

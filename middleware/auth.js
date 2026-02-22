@@ -3,7 +3,11 @@
 const jwt = require('jsonwebtoken');
 const { stmts } = require('../database');
 
-const SECRET = process.env.JWT_SECRET || 'fallback_secret';
+const SECRET = process.env.JWT_SECRET;
+if (!SECRET) {
+  console.error('FATAL: JWT_SECRET is not set. Add it to your .env file and restart.');
+  process.exit(1);
+}
 
 function auth(req, res, next) {
   const header = req.headers['authorization'];

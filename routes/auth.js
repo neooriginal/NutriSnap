@@ -6,7 +6,7 @@ const jwt     = require('jsonwebtoken');
 const { stmts } = require('../database');
 
 const router = express.Router();
-const SECRET = process.env.JWT_SECRET || 'fallback_secret';
+const SECRET = process.env.JWT_SECRET;
 
 // POST /api/auth/register
 router.post('/register', (req, res) => {

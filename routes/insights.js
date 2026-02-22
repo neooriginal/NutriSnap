@@ -3,15 +3,15 @@
 const express = require('express');
 const OpenAI  = require('openai');
 const { db, stmts } = require('../database');
+const { computeStats } = require('../utils');
 
 const router = express.Router();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// ─── Daily AI insight ─────────────────────────────────────────────────────────
-// GET /api/insights/daily
 router.get('/daily', async (req, res) => {
   try {
-    const user = stmts.getUserById.get(req.user.id);
+    const raw  = stmts.getUserById.get(req.user.id);
+    const user = { ...raw, ...computeStats(raw) };
 
     // Last 7 days food summary
     const to   = new Date().toISOString().slice(0, 10);
@@ -101,11 +101,10 @@ Given this data, give ONE specific action the user must take TODAY. Be direct an
   }
 });
 
-// ─── Weekly deep analysis ─────────────────────────────────────────────────────
-// GET /api/insights/weekly
 router.get('/weekly', async (req, res) => {
   try {
-    const user = stmts.getUserById.get(req.user.id);
+    const raw  = stmts.getUserById.get(req.user.id);
+    const user = { ...raw, ...computeStats(raw) };
     const to   = new Date().toISOString().slice(0, 10);
     const from = (() => { const d = new Date(to); d.setDate(d.getDate() - 29); return d.toISOString().slice(0, 10); })();
 

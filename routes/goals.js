@@ -3,13 +3,11 @@
 const express  = require('express');
 const OpenAI   = require('openai');
 const { db, stmts } = require('../database');
+const { computeStats } = require('../utils');
 
 const router = express.Router();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// ─── Weight goal CRUD ─────────────────────────────────────────────────────────
-
-// GET /api/goals/weight  — active goal + recent logs
 router.get('/weight', (req, res) => {
   const goal = db.prepare(`
     SELECT * FROM weight_goals WHERE user_id = ? ORDER BY created_at DESC LIMIT 1
@@ -22,7 +20,6 @@ router.get('/weight', (req, res) => {
   res.json({ goal: goal || null, logs });
 });
 
-// POST /api/goals/weight  — create/replace goal
 router.post('/weight', express.json(), (req, res) => {
   const { target_weight, target_date, notes } = req.body;
   if (!target_weight || !target_date)
@@ -39,14 +36,12 @@ router.post('/weight', express.json(), (req, res) => {
   res.json({ id: result.lastInsertRowid, success: true });
 });
 
-// DELETE /api/goals/weight/:id
 router.delete('/weight/:id', (req, res) => {
   db.prepare(`DELETE FROM weight_goals WHERE id = ? AND user_id = ?`)
     .run(parseInt(req.params.id), req.user.id);
   res.json({ success: true });
 });
 
-// POST /api/goals/weight/log  — log today's weight
 router.post('/weight/log', express.json(), (req, res) => {
   const { weight, note } = req.body;
   if (!weight) return res.status(400).json({ error: 'weight required.' });
@@ -57,9 +52,6 @@ router.post('/weight/log', express.json(), (req, res) => {
   res.json({ id: result.lastInsertRowid, success: true });
 });
 
-// ─── AI Goal Analysis ──────────────────────────────────────────────────────────
-
-// GET /api/goals/weight/analysis
 router.get('/weight/analysis', async (req, res) => {
   try {
     const goal = db.prepare(`
@@ -70,7 +62,8 @@ router.get('/weight/analysis', async (req, res) => {
       SELECT * FROM weight_logs WHERE user_id = ? ORDER BY logged_at DESC LIMIT 30
     `).all(req.user.id);
 
-    const user = stmts.getUserById.get(req.user.id);
+    const raw  = stmts.getUserById.get(req.user.id);
+    const user = { ...raw, ...computeStats(raw) };
 
     if (!goal) return res.json({ message: "Set a weight goal first — then tap 'Get AI tips' for personalised coaching." });
 
