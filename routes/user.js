@@ -1,19 +1,18 @@
 'use strict';
 
+const crypto  = require('crypto');
 const express = require('express');
 const { stmts } = require('../database');
 
 const router = express.Router();
 
-// GET /api/user/profile
 router.get('/profile', (req, res) => {
   const user = stmts.getUserById.get(req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found.' });
-  const { password, ...safe } = user;
-  res.json({ ...safe, ...computeStats(safe) });
+  const { password, mcp_api_key, ...safe } = user;
+  res.json({ ...safe, ...computeStats(safe), has_mcp_key: !!mcp_api_key });
 });
 
-// PUT /api/user/profile
 router.put('/profile', express.json(), (req, res) => {
   const { name, age, weight, height, gender, activity, goal } = req.body;
   stmts.updateUser.run({
@@ -27,11 +26,27 @@ router.put('/profile', express.json(), (req, res) => {
     goal:     goal     || 'maintain'
   });
   const user = stmts.getUserById.get(req.user.id);
-  const { password, ...safe } = user;
-  res.json({ ...safe, ...computeStats(safe) });
+  const { password, mcp_api_key, ...safe } = user;
+  res.json({ ...safe, ...computeStats(safe), has_mcp_key: !!mcp_api_key });
 });
 
-// ─── Stats computation ────────────────────────────────────────────────────────
+router.get('/mcp-key', (req, res) => {
+  const user = stmts.getUserById.get(req.user.id);
+  if (!user?.mcp_api_key) return res.json({ key: null });
+  const k = user.mcp_api_key;
+  res.json({ key: k.slice(0, 8) + '••••••••••••••••' + k.slice(-4) });
+});
+
+router.post('/mcp-key', (req, res) => {
+  const key = 'ns_' + crypto.randomBytes(24).toString('hex');
+  stmts.setMcpKey.run(key, req.user.id);
+  res.json({ key });
+});
+
+router.delete('/mcp-key', (req, res) => {
+  stmts.setMcpKey.run(null, req.user.id);
+  res.json({ success: true });
+});
 
 function computeStats(user) {
   const { age, weight, height, gender, activity, goal } = user;
@@ -44,19 +59,16 @@ function computeStats(user) {
   }
 
   if (age && weight && height && gender) {
-    // Mifflin-St Jeor BMR
     const bmr = gender === 'female'
       ? 10 * weight + 6.25 * height - 5 * age - 161
       : 10 * weight + 6.25 * height - 5 * age + 5;
 
-    const multipliers = {
-      sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9
-    };
+    const multipliers = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9 };
     const tdee = Math.round(bmr * (multipliers[activity] || 1.55));
-
     const goalAdjust = { lose: -500, maintain: 0, gain: 300 };
-    stats.bmr   = Math.round(bmr);
-    stats.tdee  = tdee;
+
+    stats.bmr  = Math.round(bmr);
+    stats.tdee = tdee;
     stats.calorie_target = tdee + (goalAdjust[goal] || 0);
   }
 

@@ -19,48 +19,51 @@ router.post('/analyze', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No image provided.' });
 
-    const base64 = req.file.buffer.toString('base64');
+    const base64  = req.file.buffer.toString('base64');
     const mimeType = req.file.mimetype || 'image/jpeg';
-    const dataUri = `data:${mimeType};base64,${base64}`;
+    const dataUri  = `data:${mimeType};base64,${base64}`;
+    console.log('[analyze] image size:', Math.round(req.file.buffer.length / 1024), 'KB');
 
-    const completion = await openai.chat.completions.create({
+    const systemPrompt = `You are a nutrition expert. Analyze the food in the image.
+Always respond with ONLY valid JSON — no markdown, no extra text. Use this exact structure:
+{"food_name":"string","description":"string","serving_size":"string","calories":number,"protein":number,"carbs":number,"fat":number,"fiber":number,"confidence":"high|medium|low"}
+If you cannot identify food, still return the JSON with your best guess and confidence:"low".
+NEVER return null. Always return a JSON object.`;
+
+    const makeRequest = () => openai.chat.completions.create({
       model: 'gpt-4o',
       response_format: { type: 'json_object' },
       messages: [
-        {
-          role: 'system',
-          content: `You are a nutrition expert AI. Analyze food images and return accurate nutritional data.
-Always respond with ONLY valid JSON matching this exact structure:
-{
-  "food_name": "string (concise name)",
-  "description": "string (brief description of what you see)",
-  "serving_size": "string (e.g. '1 plate (~350g)')",
-  "calories": number,
-  "protein": number (grams),
-  "carbs": number (grams),
-  "fat": number (grams),
-  "fiber": number (grams),
-  "confidence": "high|medium|low"
-}
-Be as accurate as possible. If multiple items are visible, estimate the total for the full visible portion.`
-        },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: 'Analyze this food image and provide nutritional information.' },
-            { type: 'image_url', image_url: { url: dataUri, detail: 'high' } }
-          ]
-        }
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: [
+          { type: 'text', text: 'Analyze this food image and return the nutrition JSON.' },
+          { type: 'image_url', image_url: { url: dataUri, detail: 'auto' } }
+        ]}
       ],
-      max_tokens: 500
+      max_tokens: 800
     });
 
-    const raw = completion.choices[0].message.content;
-    const nutrition = JSON.parse(raw);
+    let completion = await makeRequest();
+    let raw = completion.choices[0].message.content;
+    console.log('[analyze] finish_reason:', completion.choices[0].finish_reason, 'raw:', raw?.slice(0, 200));
 
-    // Store image in response for optional frontend use (thumbnail preview)
+    let nutrition;
+    try { nutrition = JSON.parse(raw); } catch (_) { nutrition = null; }
+
+    // Retry once if we got a null/invalid response
+    if (!nutrition || typeof nutrition !== 'object') {
+      console.log('[analyze] Got null, retrying...');
+      completion = await makeRequest();
+      raw = completion.choices[0].message.content;
+      console.log('[analyze] retry raw:', raw?.slice(0, 200));
+      try { nutrition = JSON.parse(raw); } catch (_) { nutrition = null; }
+    }
+
+    if (!nutrition || typeof nutrition !== 'object') {
+      return res.status(422).json({ error: "Couldn't identify the food in this image. Please try a clearer photo." });
+    }
+
     nutrition.image_preview = dataUri;
-
     res.json(nutrition);
   } catch (err) {
     console.error('OpenAI error:', err.message);

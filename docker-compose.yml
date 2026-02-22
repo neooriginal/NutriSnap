@@ -5,10 +5,13 @@ services:
     restart: unless-stopped
     ports:
       - "${PORT:-3000}:3000"
+      - "${MCP_PORT:-3001}:3001"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - JWT_SECRET=${JWT_SECRET}
       - PORT=3000
+      - MCP_API_KEY=${MCP_API_KEY}
+      - MCP_PORT=3001
     volumes:
       # Persist the SQLite database
       - nutrisnap_data:/app/data

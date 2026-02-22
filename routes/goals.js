@@ -72,7 +72,7 @@ router.get('/weight/analysis', async (req, res) => {
 
     const user = stmts.getUserById.get(req.user.id);
 
-    if (!goal) return res.json({ message: 'Set a weight goal first to get AI analysis.' });
+    if (!goal) return res.json({ message: "Set a weight goal first — then tap 'Get AI tips' for personalised coaching." });
 
     const daysLeft = Math.max(0, Math.ceil((new Date(goal.target_date) - new Date()) / 86400000));
     const latestWeight = logs[0]?.weight || user.weight || goal.start_weight;
@@ -84,18 +84,21 @@ router.get('/weight/analysis', async (req, res) => {
       messages: [
         {
           role: 'system',
-          content: `You are a supportive, science-based nutrition and fitness coach. 
-Respond in 3-4 short, encouraging sentences with ONE concrete actionable tip. 
-Be specific, not generic. No emojis. Plain text only.`
+          content: `You are a direct weight coach. Tell the user exactly what they need to do NOW to hit their goal.
+- Plain language — no jargon.
+- If on track, raise the bar: "keep it up, and also do X to make it certain."
+- If off track, be honest and name the single most important change to make this week.
+- End with a specific, time-bound action (e.g. "log your weight every morning before breakfast").
+- 3 sentences max. No emojis. No generic advice.`
         },
         {
           role: 'user',
-          content: `User goal: lose ${needed.toFixed(1)} kg more (from ${latestWeight} kg to ${goal.target_weight} kg).
-Deadline: ${daysLeft} days left.
+          content: `Goal: lose ${needed.toFixed(1)} more kg (from ${latestWeight} kg to ${goal.target_weight} kg).
+Time left: ${daysLeft} days.
 Progress so far: ${Math.abs(delta).toFixed(1)} kg ${delta < 0 ? 'lost' : 'gained'}.
-Weight entries: ${logs.slice(0, 7).map(l => `${l.logged_at.slice(0, 10)}: ${l.weight}kg`).join(', ') || 'none yet'}.
-User: ${user.age || '?'} years, ${user.gender || '?'}, ${user.activity || 'moderate'} activity.
-Provide a brief progress analysis and one actionable tip.`
+Recent weigh-ins: ${logs.slice(0, 7).map(l => `${l.logged_at.slice(0, 10)}: ${l.weight}kg`).join(', ') || 'none yet'}.
+Person: ${user.age || '?'} years, ${user.gender || '?'}, ${user.activity || 'moderate'} activity.
+Give a direct, honest progress check and the one most important action to take this week.`
         }
       ],
       max_tokens: 200

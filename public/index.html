@@ -102,21 +102,21 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Activity Level</label>
+          <label>How active are you?</label>
           <select id="reg-activity">
-            <option value="sedentary">Sedentary</option>
-            <option value="light">Lightly active</option>
-            <option value="moderate" selected>Moderately active</option>
-            <option value="active">Very active</option>
-            <option value="very_active">Extremely active</option>
+            <option value="sedentary">Mostly sitting (desk job)</option>
+            <option value="light">Light — walks, easy exercise 1-3×/week</option>
+            <option value="moderate" selected>Moderate — exercise 3-5×/week</option>
+            <option value="active">Very active — hard exercise 6-7×/week</option>
+            <option value="very_active">Extremely active — physical job + daily training</option>
           </select>
         </div>
         <div class="form-group">
-          <label>Goal</label>
+          <label>My goal</label>
           <select id="reg-goal">
             <option value="lose">Lose weight</option>
-            <option value="maintain" selected>Maintain</option>
-            <option value="gain">Gain weight</option>
+            <option value="maintain" selected>Stay the same</option>
+            <option value="gain">Build up / gain weight</option>
           </select>
         </div>
       </div>
@@ -224,12 +224,12 @@
       <!-- AI Daily Insight -->
       <div class="insight-card glass" id="insight-card">
         <div class="insight-header">
-          <span class="insight-tag">AI Insight</span>
+          <span class="insight-tag">Today's tip</span>
           <button class="icon-btn" id="insight-refresh" onclick="App.refreshInsight(); event.stopPropagation()" title="Refresh">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>
           </button>
         </div>
-        <p id="insight-text" class="insight-text">Loading your daily insight…</p>
+        <p id="insight-text" class="insight-text">Checking your progress…</p>
       </div>
 
       <!-- Today's meals -->
@@ -425,7 +425,7 @@
 
         <!-- Protocol selector -->
         <div id="fast-protocol-wrap">
-          <p class="fast-protocol-label">Choose protocol</p>
+          <p class="fast-protocol-label">Choose your schedule</p>
           <div class="fast-protocols">
             <button class="proto-btn active" data-hours="16" data-proto="16:8" onclick="App.selectProtocol(this)">16:8</button>
             <button class="proto-btn" data-hours="18" data-proto="18:6" onclick="App.selectProtocol(this)">18:6</button>
@@ -483,7 +483,7 @@
   <div id="tab-charts" class="tab-content">
     <div class="scroll-container">
       <div class="section-header pad-top">
-        <h2>Nutrition history</h2>
+        <h2>Your progress</h2>
         <select id="chart-range" onchange="App.loadCharts()" class="range-select">
           <option value="7">7 days</option>
           <option value="14">14 days</option>
@@ -499,14 +499,14 @@
       </div>
 
       <div class="chart-card glass">
-        <h4>Macronutrients</h4>
+        <h4>Proteins, Carbs &amp; Fat</h4>
         <div class="chart-wrap">
           <canvas id="macros-chart"></canvas>
         </div>
       </div>
 
       <div class="chart-card glass">
-        <h4>Macro Split (average)</h4>
+        <h4>Nutrient breakdown (average)</h4>
         <div class="chart-wrap chart-wrap-sm">
           <canvas id="pie-chart"></canvas>
         </div>
@@ -538,20 +538,22 @@
               <div class="bmi-thumb" id="bmi-thumb"></div>
             </div>
             <div class="bmi-labels">
-              <span>Underweight</span><span>Normal</span><span>Over</span><span>Obese</span>
+              <span>Too thin</span><span>Healthy</span><span>Overweight</span><span>Obese</span>
             </div>
           </div>
         </div>
         <div class="stat-card glass">
-          <span class="stat-label">Daily Target</span>
+          <span class="stat-label">Your daily target</span>
           <span id="stat-target" class="stat-big">— <small>kcal</small></span>
         </div>
         <div class="stat-card glass">
-          <span class="stat-label">BMR</span>
+          <span class="stat-label">Resting burn</span>
+          <span class="stat-sublabel">calories your body needs at rest</span>
           <span id="stat-bmr" class="stat-big">— <small>kcal</small></span>
         </div>
         <div class="stat-card glass">
-          <span class="stat-label">TDEE</span>
+          <span class="stat-label">Full day burn</span>
+          <span class="stat-sublabel">with your activity level included</span>
           <span id="stat-tdee" class="stat-big">— <small>kcal</small></span>
         </div>
       </div>
@@ -560,7 +562,7 @@
       <div class="weight-goal-card glass">
         <div class="section-header" style="margin-bottom:14px">
           <h3>Weight goal</h3>
-          <button class="btn-ghost" onclick="App.getWeightAnalysis()" id="wg-ai-btn">AI analysis</button>
+          <button class="btn-ghost" onclick="App.getWeightAnalysis()" id="wg-ai-btn">Get AI tips</button>
         </div>
         <div id="wg-progress-wrap" class="hidden">
           <div class="wg-progress-bar-wrap">
@@ -602,6 +604,32 @@
         </div>
       </div>
 
+      <!-- AI assistant access -->
+      <div class="mcp-key-card glass">
+        <div class="section-header" style="margin-bottom:10px">
+          <h3>AI assistant access</h3>
+        </div>
+        <p class="mcp-key-desc">Connect Claude or any MCP client to your personal data with an API key.</p>
+        <div id="mcp-key-display" class="mcp-key-display hidden">
+          <code id="mcp-key-value"></code>
+          <button class="icon-btn" onclick="App.copyMcpKey()" title="Copy key">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+        <p id="mcp-key-hint" class="mcp-key-hint"></p>
+        <div class="mcp-key-actions">
+          <button class="btn-ghost" id="mcp-generate-btn" onclick="App.generateMcpKey()">Generate key</button>
+          <button class="btn-ghost danger-ghost hidden" id="mcp-revoke-btn" onclick="App.revokeMcpKey()">Revoke</button>
+        </div>
+        <div id="mcp-url-row" class="mcp-url-row hidden">
+          <span>SSE&nbsp;URL</span>
+          <code id="mcp-url-value"></code>
+          <button class="icon-btn" onclick="App.copyMcpUrl()" title="Copy URL">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+      </div>
+
       <!-- Edit profile -->
       <div class="profile-edit-card glass">
         <h3>Personal details</h3>
@@ -635,22 +663,22 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Activity</label>
-            <select id="p-activity">
-              <option value="sedentary">Sedentary</option>
-              <option value="light">Light</option>
-              <option value="moderate">Moderate</option>
-              <option value="active">Active</option>
-              <option value="very_active">Very Active</option>
+          <label>Activity level</label>
+          <select id="p-activity">
+            <option value="sedentary">Mostly sitting (desk job)</option>
+            <option value="light">Light — walks, easy exercise 1-3×/week</option>
+            <option value="moderate">Moderate — exercise 3-5×/week</option>
+            <option value="active">Very active — hard exercise 6-7×/week</option>
+            <option value="very_active">Extremely active — physical job + daily training</option>
             </select>
           </div>
         </div>
         <div class="form-group">
-          <label>Goal</label>
+          <label>My goal</label>
           <select id="p-goal">
-            <option value="lose">Lose weight (−500 kcal/day)</option>
-            <option value="maintain">Maintain weight</option>
-            <option value="gain">Gain weight (+300 kcal/day)</option>
+            <option value="lose">Lose weight — eat about 500 kcal less per day</option>
+            <option value="maintain">Stay the same — maintain current weight</option>
+            <option value="gain">Build up — eat about 300 kcal more per day</option>
           </select>
         </div>
         <button class="btn-primary" onclick="App.saveProfile()">Save Changes</button>

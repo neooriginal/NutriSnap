@@ -609,6 +609,7 @@ select option { background: var(--bg2); }
 .stat-card.bmi-card { grid-column: 1 / -1; }
 .stat-top    { display: flex; align-items: center; justify-content: space-between; }
 .stat-label  { font-size: 11px; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+.stat-sublabel { font-size: 10px; color: var(--text3); font-weight: 400; margin-top: 2px; margin-bottom: 4px; }
 .stat-big    { font-size: 30px; font-weight: 800; line-height: 1; }
 .stat-big small { font-size: 13px; font-weight: 400; color: var(--text2); }
 
@@ -647,6 +648,32 @@ select option { background: var(--bg2); }
 .profile-edit-card h3 {
   font-size: 16px; font-weight: 700; margin-bottom: 16px;
 }
+
+.mcp-key-card { padding: 20px; margin-bottom: 14px; }
+.mcp-key-card h3 { font-size: 16px; font-weight: 700; }
+.mcp-url-row {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg3); border-radius: 8px;
+  padding: 8px 12px; margin-top: 12px;
+  font-size: 12px; color: var(--text2);
+}
+.mcp-url-row code {
+  flex: 1; font-family: monospace; font-size: 12px;
+  color: var(--text1); word-break: break-all;
+}
+.mcp-key-desc { font-size: 13px; color: var(--text2); margin-bottom: 14px; }
+.mcp-key-display {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg3); border-radius: 8px;
+  padding: 10px 12px; margin-bottom: 8px;
+}
+.mcp-key-display code {
+  flex: 1; font-size: 12px; font-family: monospace;
+  color: var(--text1); word-break: break-all;
+}
+.mcp-key-hint { font-size: 12px; color: var(--text2); min-height: 18px; margin-bottom: 12px; }
+.mcp-key-actions { display: flex; gap: 10px; }
+.danger-ghost { color: var(--danger) !important; }
 
 /* ─── Responsive tweaks ────────────────────────────────────────── */
 @media (max-width: 380px) {

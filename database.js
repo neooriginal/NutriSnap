@@ -5,18 +5,14 @@ const path = require('path');
 
 const DB_PATH = path.join(__dirname, 'data', 'food_tracker.db');
 
-// Ensure data directory exists
 const fs = require('fs');
 const dataDir = path.join(__dirname, 'data');
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
 const db = new Database(DB_PATH);
 
-// Performance settings
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
-
-// ─── Schema ───────────────────────────────────────────────────────────────────
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
@@ -92,10 +88,14 @@ db.exec(`
     ON weight_logs(user_id, logged_at);
 `);
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN mcp_api_key TEXT`);
+} catch (_) {}
+try {
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_mcp_api_key ON users(mcp_api_key) WHERE mcp_api_key IS NOT NULL`);
+} catch (_) {}
 
 const stmts = {
-  // Users
   createUser: db.prepare(`
     INSERT INTO users (name, email, password, age, weight, height, gender, activity, goal)
     VALUES (@name, @email, @password, @age, @weight, @height, @gender, @activity, @goal)
@@ -108,8 +108,9 @@ const stmts = {
         gender=@gender, activity=@activity, goal=@goal
     WHERE id=@id
   `),
+  setMcpKey:        db.prepare(`UPDATE users SET mcp_api_key = ? WHERE id = ?`),
+  getUserByMcpKey:  db.prepare(`SELECT * FROM users WHERE mcp_api_key = ?`),
 
-  // Food logs
   insertLog: db.prepare(`
     INSERT INTO food_logs (user_id, log_date, meal_type, food_name, description,
                            calories, protein, carbs, fat, fiber, serving_size, image_data)
@@ -144,7 +145,6 @@ const stmts = {
     WHERE user_id = ? AND log_date = ?
   `),
 
-  // Fasting
   getActiveFast: db.prepare(`
     SELECT *,
       ROUND((julianday('now') - julianday(started_at)) * 24, 2) AS elapsed_hours

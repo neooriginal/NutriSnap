@@ -340,10 +340,14 @@ const App = (() => {
   function capturePhoto() {
     const video  = document.getElementById('camera-video');
     const canvas = document.getElementById('camera-canvas');
-    canvas.width  = video.videoWidth  || 640;
-    canvas.height = video.videoHeight || 480;
-    canvas.getContext('2d').drawImage(video, 0, 0);
-    capturedImage = canvas.toDataURL('image/jpeg', 0.85);
+    const MAX    = 1024;
+    let w = video.videoWidth  || 640;
+    let h = video.videoHeight || 480;
+    if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+    if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+    capturedImage = canvas.toDataURL('image/jpeg', 0.82);
     showPreview(capturedImage);
     stopCamera();
   }
@@ -352,7 +356,21 @@ const App = (() => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = ev => { capturedImage = ev.target.result; showPreview(capturedImage); };
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1024;
+        let w = img.width, h = img.height;
+        if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+        if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+        const canvas = document.getElementById('camera-canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        capturedImage = canvas.toDataURL('image/jpeg', 0.82);
+        showPreview(capturedImage);
+      };
+      img.src = ev.target.result;
+    };
     reader.readAsDataURL(file);
   }
 
@@ -363,10 +381,11 @@ const App = (() => {
     document.getElementById('camera-video').classList.add('hidden');
     document.getElementById('btn-capture').classList.add('hidden');
     document.getElementById('btn-retake').classList.remove('hidden');
-    document.getElementById('btn-analyze').classList.remove('hidden');
+    document.getElementById('btn-analyze').classList.add('hidden');
     document.getElementById('analysis-result').classList.add('hidden');
     document.getElementById('btn-open-camera').innerHTML =
       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Camera`;
+    analyzeFood();
   }
 
   function retakePhoto() {
@@ -611,6 +630,7 @@ const App = (() => {
       localStorage.setItem('ns_user', JSON.stringify(user));
       renderProfile(data);
       loadWeightGoal();
+      loadMcpKey();
     } catch (e) { console.error(e); }
   }
 
@@ -1051,7 +1071,7 @@ const App = (() => {
       insightCached  = cached;
       return;
     }
-    el.textContent = 'Loading your daily insight…';
+    el.textContent = 'Checking your progress…';
     el.classList.add('loading');
     try {
       const { insight } = await api('GET', '/api/insights/daily');
@@ -1084,6 +1104,69 @@ const App = (() => {
       el.classList.remove('loading');
       if (btn) { btn.disabled = false; btn.style.transform = ''; }
     }
+  }
+
+  // ─── MCP Key ─────────────────────────────────────────────────────────────
+  async function loadMcpKey() {
+    try {
+      const data      = await api('GET', '/api/user/mcp-key');
+      const display   = document.getElementById('mcp-key-display');
+      const hint      = document.getElementById('mcp-key-hint');
+      const revokeBtn = document.getElementById('mcp-revoke-btn');
+      const genBtn    = document.getElementById('mcp-generate-btn');
+      const urlRow = document.getElementById('mcp-url-row');
+      if (data.key) {
+        document.getElementById('mcp-key-value').textContent = data.key;
+        display.classList.remove('hidden');
+        revokeBtn.classList.remove('hidden');
+        genBtn.textContent = 'Regenerate';
+        hint.textContent   = '';
+        document.getElementById('mcp-url-value').textContent = `${location.protocol}//${location.hostname}:3001/sse`;
+        urlRow.classList.remove('hidden');
+      } else {
+        display.classList.add('hidden');
+        revokeBtn.classList.add('hidden');
+        genBtn.textContent = 'Generate key';
+        hint.textContent   = 'No key yet.';
+        urlRow.classList.add('hidden');
+      }
+    } catch (e) { console.error(e); }
+  }
+
+  async function generateMcpKey() {
+    if (!confirm('Generate a new key? Any existing key will stop working immediately.')) return;
+    try {
+      const data = await api('POST', '/api/user/mcp-key');
+      document.getElementById('mcp-key-value').textContent = data.key;
+      document.getElementById('mcp-key-display').classList.remove('hidden');
+      document.getElementById('mcp-revoke-btn').classList.remove('hidden');
+      document.getElementById('mcp-generate-btn').textContent = 'Regenerate';
+      document.getElementById('mcp-key-hint').textContent = "Copy this key now — it won't be shown again in full.";
+      document.getElementById('mcp-url-value').textContent = `${location.protocol}//${location.hostname}:3001/sse`;
+      document.getElementById('mcp-url-row').classList.remove('hidden');
+    } catch (e) { toast('Failed to generate key', 'error'); }
+  }
+
+  async function revokeMcpKey() {
+    if (!confirm('Revoke your MCP key? Any connected AI clients will immediately lose access.')) return;
+    try {
+      await api('DELETE', '/api/user/mcp-key');
+      document.getElementById('mcp-key-display').classList.add('hidden');
+      document.getElementById('mcp-revoke-btn').classList.add('hidden');
+      document.getElementById('mcp-url-row').classList.add('hidden');
+      document.getElementById('mcp-generate-btn').textContent = 'Generate key';
+      document.getElementById('mcp-key-hint').textContent = 'Key revoked.';
+    } catch (e) { toast('Failed to revoke key', 'error'); }
+  }
+
+  function copyMcpKey() {
+    const key = document.getElementById('mcp-key-value').textContent;
+    navigator.clipboard.writeText(key).then(() => toast('Key copied!', 'success'));
+  }
+
+  function copyMcpUrl() {
+    const url = document.getElementById('mcp-url-value').textContent;
+    navigator.clipboard.writeText(url).then(() => toast('URL copied!', 'success'));
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1260,7 +1343,9 @@ const App = (() => {
     // Insights
     refreshInsight,
     // Notifications
-    requestNotifications
+    requestNotifications,
+    // MCP key
+    loadMcpKey, generateMcpKey, revokeMcpKey, copyMcpKey, copyMcpUrl
   };
 
 })();

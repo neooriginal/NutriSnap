@@ -70,29 +70,29 @@ router.get('/daily', async (req, res) => {
       messages: [
         {
           role: 'system',
-          content: `You are a proactive, evidence-based nutrition coach delivering a personalized daily briefing.
+          content: `You are a direct, no-nonsense nutrition coach. You proactively tell the user exactly what they need to do TODAY based on their data — not just observations.
 Rules:
-- Be direct and specific, not generic.
-- Max 4 sentences total.
-- Format: 1 observation about recent nutrition, 1 about fasting/goal progress, 1 actionable tip for today.
-- Plain text, no markdown, no emojis.`
+- Second person ("you", "your") and imperative tone ("eat", "skip", "aim for").
+- Be specific with numbers and times (e.g. "add a 30g protein snack before 3pm").
+- Identify the single most important action they should take TODAY.
+- If behind on calories, say what exactly to eat. If over, say what to cut.
+- Max 3 sentences. No generic advice. No emojis. Plain text only.`
         },
         {
           role: 'user',
-          content: `User profile: ${user.age || '?'}y ${user.gender || 'person'}, ${user.activity || 'moderate'} activity, goal: ${user.goal || 'maintain'}.
-Daily calorie target: ${targetCal} kcal.
+          content: `User: ${user.age || '?'}y ${user.gender || 'person'}, ${user.activity || 'moderate'} activity, goal: ${user.goal || 'maintain'}, daily target: ${targetCal} kcal.
 
-Last 7 days nutrition:
+Last 7 days (date: calories / protein / carbs / fat):
 ${nutritionStr}
 
 Fasting: ${fastStr}
+Weight goal: ${goalStr}
+Current time: ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
 
-Weight: ${goalStr}
-
-Give a brief personalized daily insight.`
+Given this data, give ONE specific action the user must take TODAY. Be direct and proactive.`
         }
       ],
-      max_tokens: 200
+      max_tokens: 180
     });
 
     res.json({ insight: completion.choices[0].message.content.trim() });
@@ -141,22 +141,21 @@ router.get('/weekly', async (req, res) => {
       messages: [
         {
           role: 'system',
-          content: `You are a proactive nutrition and wellness coach writing a 30-day analysis report. 
-Structure your response in exactly 3 labeled sections (no markdown):
-WINS: One sentence on what went well.
-CONCERNS: One specific concern to address.
-THIS WEEK: Two concrete, personalized action items for the next 7 days.
-Plain text only, no emojis.`
+          content: `You are a blunt nutrition coach writing a 30-day review. Every section must contain a direct action — not just information.
+Structure (plain text, no markdown, no emojis):
+WINS: One sentence on what actually went well, with a specific number.
+FIX THIS: The single biggest issue — name it plainly (e.g. "You're skipping breakfast 4 out of 7 days").
+THIS WEEK: Two specific, numbered actions the user must do differently this week — include times or amounts where possible.`
         },
         {
           role: 'user',
           content: `30-day data for ${user.name || 'user'}:
-- Days logged: ${logDays}/30
-- Avg daily calories: ${avgCal} kcal (target: ${user.calorie_target || 2000})
+- Days with meals logged: ${logDays}/30
+- Average daily calories: ${avgCal} kcal (target: ${user.calorie_target || 2000})
 - Completed fasts: ${fastingHistory.filter(f => f.status === 'completed').length}, avg ${fastingHistory.filter(f => f.status === 'completed').length ? (fastingHistory.filter(f => f.status === 'completed').reduce((a, b) => a + b.actual_hours, 0) / fastingHistory.filter(f => f.status === 'completed').length).toFixed(1) : 0}h
-- Weight change: ${weightLogs.length >= 2 ? (weightLogs[weightLogs.length - 1].weight - weightLogs[0].weight).toFixed(1) + 'kg over ' + weightLogs.length + ' measurements' : 'insufficient data'}
-- User goal: ${user.goal || 'maintain'}, activity: ${user.activity || 'moderate'}
-Provide a 30-day analysis.`
+- Weight change: ${weightLogs.length >= 2 ? (weightLogs[weightLogs.length - 1].weight - weightLogs[0].weight).toFixed(1) + 'kg over ' + weightLogs.length + ' measurements' : 'not enough data'}
+- Goal: ${user.goal || 'maintain'}, activity: ${user.activity || 'moderate'}
+Write the 30-day review.`
         }
       ],
       max_tokens: 300
