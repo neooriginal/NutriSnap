@@ -69,7 +69,7 @@ router.get('/daily', async (req, res) => {
       model: 'gpt-5-mini',
       messages: [
         {
-          role: 'system',
+          role: 'developer',
           content: `You are a direct, no-nonsense nutrition coach. You proactively tell the user exactly what they need to do TODAY based on their data — not just observations.
 Rules:
 - Second person ("you", "your") and imperative tone ("eat", "skip", "aim for").
@@ -95,7 +95,7 @@ Given this data, give ONE specific action the user must take TODAY. Be direct an
       max_completion_tokens: 180
     });
 
-    res.json({ insight: completion.choices[0].message.content.trim() });
+    res.json({ insight: (completion.choices[0].message.content || completion.choices[0].message.refusal || '').trim() });
   } catch (e) {
     res.status(500).json({ error: 'Insight generation failed: ' + e.message });
   }
@@ -139,7 +139,7 @@ router.get('/weekly', async (req, res) => {
       model: 'gpt-5-mini',
       messages: [
         {
-          role: 'system',
+          role: 'developer',
           content: `You are a blunt nutrition coach writing a 30-day review. Every section must contain a direct action — not just information.
 Structure (plain text, no markdown, no emojis):
 WINS: One sentence on what actually went well, with a specific number.
@@ -160,7 +160,7 @@ Write the 30-day review.`
       max_completion_tokens: 300
     });
 
-    res.json({ report: completion.choices[0].message.content.trim() });
+    res.json({ report: (completion.choices[0].message.content || completion.choices[0].message.refusal || '').trim() });
   } catch (e) {
     res.status(500).json({ error: 'Report generation failed: ' + e.message });
   }
@@ -240,13 +240,16 @@ Answer questions about their nutrition, suggest meals, explain macros, or give a
     const completion = await openai.chat.completions.create({
       model: 'gpt-5-mini',
       messages: [
-        { role: 'system', content: systemContent },
+        { role: 'developer', content: systemContent },
         ...messages.slice(-10)  // keep last 10 turns to limit context
       ],
       max_completion_tokens: 400
     });
 
-    res.json({ reply: completion.choices[0].message.content.trim() });
+    const msg = completion.choices[0].message;
+    console.log('[chat] finish_reason:', completion.choices[0].finish_reason, 'content:', msg.content?.slice(0, 100));
+    const reply = msg.content || msg.refusal || '';
+    res.json({ reply: reply.trim() });
   } catch (e) {
     res.status(500).json({ error: 'Chat failed: ' + e.message });
   }

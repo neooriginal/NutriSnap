@@ -38,7 +38,7 @@ NEVER return null. Always return a JSON object.`;
       model: 'gpt-5-mini',
       response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: systemPrompt },
+        { role: 'developer', content: systemPrompt },
         { role: 'user', content: [
           { type: 'text', text: userText },
           { type: 'image_url', image_url: { url: dataUri, detail: 'auto' } }
@@ -48,7 +48,7 @@ NEVER return null. Always return a JSON object.`;
     });
 
     let completion = await makeRequest();
-    let raw = completion.choices[0].message.content;
+    let raw = (completion.choices[0].message.content || completion.choices[0].message.refusal);
     console.log('[analyze] finish_reason:', completion.choices[0].finish_reason, 'raw:', raw?.slice(0, 200));
 
     let nutrition;
@@ -58,7 +58,7 @@ NEVER return null. Always return a JSON object.`;
     if (!nutrition || typeof nutrition !== 'object') {
       console.log('[analyze] Got null, retrying...');
       completion = await makeRequest();
-      raw = completion.choices[0].message.content;
+      raw = (completion.choices[0].message.content || completion.choices[0].message.refusal);
       console.log('[analyze] retry raw:', raw?.slice(0, 200));
       try { nutrition = JSON.parse(raw); } catch (_) { nutrition = null; }
     }

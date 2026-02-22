@@ -76,7 +76,7 @@ router.get('/weight/analysis', async (req, res) => {
       model: 'gpt-5-mini',
       messages: [
         {
-          role: 'system',
+          role: 'developer',
           content: `You are a direct weight coach. Tell the user exactly what they need to do NOW to hit their goal.
 - Plain language — no jargon.
 - If on track, raise the bar: "keep it up, and also do X to make it certain."
@@ -97,7 +97,7 @@ Give a direct, honest progress check and the one most important action to take t
       max_completion_tokens: 200
     });
 
-    res.json({ analysis: completion.choices[0].message.content.trim() });
+    res.json({ analysis: (completion.choices[0].message.content || completion.choices[0].message.refusal || '').trim() });
   } catch (e) {
     res.status(500).json({ error: 'Analysis failed: ' + e.message });
   }
