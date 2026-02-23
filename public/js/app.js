@@ -1158,12 +1158,20 @@ const App = (() => {
     msgsEl.appendChild(typing);
     msgsEl.scrollTop = msgsEl.scrollHeight;
 
+    // After 1.5s, hint that search may be happening
+    const searchHintTimer = setTimeout(() => {
+      typing.innerHTML = '<span class="chat-searching">🔍 Searching the web…</span>';
+      typing.className = 'chat-bubble assistant searching-hint';
+    }, 1500);
+
     try {
-      const { reply } = await api('POST', '/api/insights/chat', { messages: chatMessages });
+      const data = await api('POST', '/api/insights/chat', { messages: chatMessages });
+      clearTimeout(searchHintTimer);
       typing.remove();
-      chatMessages.push({ role: 'assistant', content: reply });
+      chatMessages.push({ role: 'assistant', content: data.reply, searched: data.searched });
       renderChatMessages();
     } catch (e) {
+      clearTimeout(searchHintTimer);
       typing.remove();
       chatMessages.push({ role: 'assistant', content: 'Sorry, something went wrong. Please try again.' });
       renderChatMessages();
@@ -1193,7 +1201,10 @@ const App = (() => {
     }
 
     el.innerHTML = chatMessages.map(m => `
-      <div class="chat-bubble ${m.role}">${escHtml(m.content).replace(/\n/g, '<br/>')}</div>
+      <div class="chat-bubble ${m.role}">
+        ${m.searched ? '<span class="chat-search-badge">🔍 Web search</span>' : ''}
+        ${escHtml(m.content).replace(/\n/g, '<br/>')}
+      </div>
     `).join('');
 
     el.scrollTop = el.scrollHeight;

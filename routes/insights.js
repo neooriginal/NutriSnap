@@ -8,6 +8,26 @@ const { computeStats } = require('../utils');
 const router = express.Router();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+async function tavilySearch(query) {
+  const apiKey = process.env.TAVILY_API_KEY;
+  if (!apiKey) return { error: 'TAVILY_API_KEY not configured.' };
+  const res = await fetch('https://api.tavily.com/search', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      api_key: apiKey,
+      query,
+      search_depth: 'basic',
+      max_results: 4,
+      include_answer: true
+    })
+  });
+  if (!res.ok) return { error: `Tavily error ${res.status}` };
+  const data = await res.json();
+  const snippets = (data.results || []).map(r => `${r.title}\n${r.content}`).join('\n\n');
+  return { answer: data.answer || '', snippets };
+}
+
 router.get('/daily', async (req, res) => {
   try {
     const raw  = stmts.getUserById.get(req.user.id);
@@ -237,21 +257,78 @@ ${todayStr}
 Fasting: ${fastStr}
 Weight goal: ${goalStr}
 
-Answer questions about their nutrition, suggest meals, explain macros, or give advice — always based on their actual data. Be concise and conversational. If asked about something outside nutrition or health, redirect politely.`;
+Answer questions about their nutrition, suggest meals, explain macros, or give advice — always based on their actual data. Be concise and conversational. Use web_search when the user asks about specific food nutrition facts, recent research, recipes, or any detail you are not certain about.`;
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-5-mini',
-      messages: [
-        { role: 'developer', content: systemContent },
-        ...messages.slice(-10)  // keep last 10 turns to limit context
-      ],
-      reasoning_effort: 'low',
-      max_completion_tokens: 2000
-    });
+    const tools = [
+      {
+        type: 'function',
+        function: {
+          name: 'web_search',
+          description: 'Search the web for up-to-date nutrition facts, food details, recipes, or health research. Use this whenever you need specific data you are unsure about.',
+          parameters: {
+            type: 'object',
+            properties: {
+              query: { type: 'string', description: 'A focused search query' }
+            },
+            required: ['query']
+          }
+        }
+      }
+    ];
 
-    const msg = completion.choices[0].message;
-    const reply = msg.content || msg.refusal || '';
-    res.json({ reply: reply.trim() });
+    const threadMessages = [
+      { role: 'developer', content: systemContent },
+      ...messages.slice(-10)
+    ];
+
+    // Agentic loop — run until the model stops calling tools (max 3 rounds)
+    let finalReply = '';
+    let didSearch  = false;
+    for (let round = 0; round < 3; round++) {
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-5-mini',
+        messages: threadMessages,
+        tools,
+        tool_choice: 'auto',
+        reasoning_effort: 'low',
+        max_completion_tokens: 2000
+      });
+
+      const choice = completion.choices[0];
+      const msg    = choice.message;
+
+      // Model is done — no tool call
+      if (choice.finish_reason !== 'tool_calls') {
+        finalReply = msg.content || msg.refusal || '';
+        break;
+      }
+
+      // Execute each tool call
+      threadMessages.push(msg);  // append assistant message with tool_calls
+
+      for (const tc of msg.tool_calls) {
+        let toolResult;
+        try {
+          const args = JSON.parse(tc.function.arguments);
+          console.log('[chat] web_search:', args.query);
+          didSearch  = true;
+          toolResult = await tavilySearch(args.query);
+          toolResult = toolResult.answer
+            ? `Summary: ${toolResult.answer}\n\nDetails:\n${toolResult.snippets}`
+            : toolResult.snippets || toolResult.error || 'No results found.';
+        } catch (e) {
+          toolResult = 'Search failed: ' + e.message;
+        }
+
+        threadMessages.push({
+          role: 'tool',
+          tool_call_id: tc.id,
+          content: String(toolResult)
+        });
+      }
+    }
+
+    res.json({ reply: finalReply.trim(), searched: didSearch });
   } catch (e) {
     res.status(500).json({ error: 'Chat failed: ' + e.message });
   }
