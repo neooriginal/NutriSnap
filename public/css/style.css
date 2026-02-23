@@ -547,6 +547,8 @@ select option { background: var(--bg2); }
 
 .result-edit { margin-bottom: 8px; }
 .result-edit .form-row { margin-bottom: 0; }
+.amount-group { flex: 0 0 76px; min-width: 76px; }
+.amount-group input { text-align: center; }
 
 /* ═══════════════════════════════════════════════════════════════
    CHARTS TAB

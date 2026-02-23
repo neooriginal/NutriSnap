@@ -468,6 +468,7 @@ const App = (() => {
 
     // Pre-fill editable fields
     document.getElementById('edit-name').value     = d.food_name || '';
+    document.getElementById('edit-amount').value   = '1';
     document.getElementById('edit-calories').value = Math.round(d.calories) || '';
     document.getElementById('edit-protein').value  = parseFloat(d.protein  || 0).toFixed(1);
     document.getElementById('edit-carbs').value    = parseFloat(d.carbs    || 0).toFixed(1);
@@ -481,11 +482,31 @@ const App = (() => {
     document.getElementById('analysis-result').classList.remove('hidden');
   }
 
+  function updateAmount() {
+    const amount = parseFloat(document.getElementById('edit-amount').value);
+    if (!analysisData || isNaN(amount) || amount <= 0) return;
+    const cal   = Math.round((analysisData.calories || 0) * amount);
+    const pro   = ((analysisData.protein  || 0) * amount).toFixed(1);
+    const carbs = ((analysisData.carbs    || 0) * amount).toFixed(1);
+    const fat   = ((analysisData.fat      || 0) * amount).toFixed(1);
+    // Update summary display
+    document.getElementById('res-calories').textContent = cal || 0;
+    document.getElementById('res-protein').textContent  = Math.round((analysisData.protein || 0) * amount) || 0;
+    document.getElementById('res-carbs').textContent    = Math.round((analysisData.carbs   || 0) * amount) || 0;
+    document.getElementById('res-fat').textContent      = Math.round((analysisData.fat     || 0) * amount) || 0;
+    // Update edit fields
+    document.getElementById('edit-calories').value = cal || '';
+    document.getElementById('edit-protein').value  = pro;
+    document.getElementById('edit-carbs').value    = carbs;
+    document.getElementById('edit-fat').value      = fat;
+  }
+
   async function logFood() {
     const name     = document.getElementById('edit-name').value.trim();
     const calories = parseFloat(document.getElementById('edit-calories').value);
     if (!name || isNaN(calories)) return toast('Food name and calories are required.', 'error');
 
+    const amount = parseFloat(document.getElementById('edit-amount').value) || 1;
     const btn = document.querySelector('#analysis-result .btn-primary');
     btn.disabled = true;
 
@@ -497,7 +518,7 @@ const App = (() => {
         protein:      parseFloat(document.getElementById('edit-protein').value)   || 0,
         carbs:        parseFloat(document.getElementById('edit-carbs').value)     || 0,
         fat:          parseFloat(document.getElementById('edit-fat').value)       || 0,
-        fiber:        analysisData?.fiber || 0,
+        fiber:        ((analysisData?.fiber || 0) * amount),
         serving_size: analysisData?.serving_size || '',
         meal_type:    document.getElementById('edit-meal-type').value,
         log_date:     today(),
@@ -1448,7 +1469,7 @@ const App = (() => {
     showLogin, showRegister,
     switchTab,
     openCamera, capturePhoto, retakePhoto, handleFileUpload,
-    analyzeFood, logFood, deleteLog,
+    analyzeFood, updateAmount, logFood, deleteLog,
     loadCharts, saveProfile,
     installPWA,
     // Fasting
